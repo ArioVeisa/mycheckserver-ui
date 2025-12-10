@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:8081',
@@ -23,7 +23,7 @@ app.use(cors({
       'http://localhost:3000',
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -61,6 +61,18 @@ app.post('/api/send-report', authenticate, async (req, res) => {
     console.error('Send report error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Serve static files from frontend build
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle React routing, return all requests to React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 });
 
 app.use((err, req, res, next) => {
