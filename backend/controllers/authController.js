@@ -170,7 +170,7 @@ export const updateProfile = async (req, res) => {
 
     const updatedUserResult = await pool.request()
       .input('userId', userId)
-      .query('SELECT id, name, email, plan, email_verified FROM users WHERE id = @userId');
+      .query('SELECT id, name, email, [plan], email_verified FROM users WHERE id = @userId');
 
     const updatedUser = updatedUserResult.recordset[0];
 
