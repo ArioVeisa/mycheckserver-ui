@@ -98,9 +98,14 @@ const createRequest = () => {
                 // Count how many ? are in this part to know how many params to use
                 const paramCount = (part.match(/\?/g) || []).length;
                 const insertParams = paramValues.slice(0, paramCount);
+                console.log('Running INSERT:', part);
+                console.log('With params:', insertParams);
                 const result = db.prepare(part).run(...insertParams);
+                console.log('INSERT result:', result);
                 lastId = result.lastInsertRowid;
+                console.log('lastId:', lastId);
               } else if (part.toUpperCase().startsWith('SELECT') && part.includes('last_insert_rowid()')) {
+                console.log('Returning lastId:', lastId);
                 return { recordset: [{ id: lastId }] };
               }
             }

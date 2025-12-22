@@ -139,8 +139,10 @@ const wrapper = {
         // Get last insert rowid using prepared statement
         const stmt = db.prepare("SELECT last_insert_rowid() as id");
         stmt.step();
-        const lastId = stmt.getAsObject().id || 0;
+        const result = stmt.getAsObject();
+        const lastId = result.id || 0;
         stmt.free();
+        console.log('INSERT lastInsertRowid:', lastId, 'result:', result);
         return { changes: db.getRowsModified(), lastInsertRowid: lastId };
       },
       get(...params) {
