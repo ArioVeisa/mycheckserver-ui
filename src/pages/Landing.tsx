@@ -181,7 +181,7 @@ const Landing = () => {
                 </CardTitle>
                 <CardDescription>Untuk kebutuhan profesional</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">Rp 99.000</span>
+                  <span className="text-4xl font-bold">Rp 100</span>
                   <span className="text-muted-foreground">/bulan</span>
                 </div>
               </CardHeader>

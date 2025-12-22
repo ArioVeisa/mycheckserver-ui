@@ -2,7 +2,7 @@ import { poolPromise } from '../config/db.js';
 import { createTransaction, verifyNotification, checkTransactionStatus } from '../services/midtransService.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const PRO_PLAN_PRICE = 99000;
+const PRO_PLAN_PRICE = 100;
 
 export const createPayment = async (req, res) => {
   try {

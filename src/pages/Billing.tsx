@@ -207,7 +207,7 @@ const Billing = () => {
             <CardContent>
               <div className="space-y-4">
                 <div className="text-3xl font-bold">
-                  Rp 99.000
+                  Rp 100
                   <span className="text-base font-normal text-muted-foreground">/month</span>
                 </div>
 
