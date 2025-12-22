@@ -62,25 +62,35 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Wait for database to initialize
-import { init } from './config/database.js';
-await init;
+async function startServer() {
+  try {
+    // Wait for database to initialize
+    const { init } = await import('./config/database.js');
+    await init;
+    console.log('Database initialized');
 
-import authRoutes from './routes/auth.js';
-import serverRoutes from './routes/servers.js';
-import notificationRoutes from './routes/notifications.js';
-import billingRoutes from './routes/billing.js';
+    const authRoutes = (await import('./routes/auth.js')).default;
+    const serverRoutes = (await import('./routes/servers.js')).default;
+    const notificationRoutes = (await import('./routes/notifications.js')).default;
+    const billingRoutes = (await import('./routes/billing.js')).default;
 
-app.use('/api/auth', authRoutes);
-app.use('/api/servers', serverRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/billing', billingRoutes);
+    app.use('/api/auth', authRoutes);
+    app.use('/api/servers', serverRoutes);
+    app.use('/api/notifications', notificationRoutes);
+    app.use('/api/billing', billingRoutes);
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    });
 
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+    app.listen(PORT, () => console.log('Server running on port ' + PORT));
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 EOF
 
                     cat > deploy/package.json << 'EOF'
