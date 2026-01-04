@@ -2,7 +2,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Create pool connection
+// Create pool connection with SSL for Azure MySQL
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -10,7 +10,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'secure',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  // Enable SSL for Azure MySQL Flexible Server
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
 // Initialize database tables
