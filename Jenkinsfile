@@ -60,6 +60,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cron from 'node-cron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,16 +86,62 @@ async function startServer() {
     await poolPromise;
     console.log('Database connected');
 
+    // Middlewares
+    const { trackApiVisit } = await import('./middleware/trackVisitor.js');
+    const { authenticate } = await import('./middleware/auth.js');
+
+    // Services
+    const { runMonitoringCycle, sendTestEmail } = await import('./services/monitorService.js');
+
+    // Routes
     const authRoutes = (await import('./routes/auth.js')).default;
     const serverRoutes = (await import('./routes/servers.js')).default;
     const notificationRoutes = (await import('./routes/notifications.js')).default;
     const billingRoutes = (await import('./routes/billing.js')).default;
+    const dashboardRoutes = (await import('./routes/dashboard.js')).default;
+    const adminRoutes = (await import('./routes/admin.js')).default;
 
+    // Apply middlewares
+    app.use('/api', trackApiVisit);
+
+    // Apply routes
     app.use('/api/auth', authRoutes);
     app.use('/api/servers', serverRoutes);
     app.use('/api/notifications', notificationRoutes);
     app.use('/api/billing', billingRoutes);
+    app.use('/api/dashboard', dashboardRoutes);
+    app.use('/api/admin', adminRoutes);
 
+    // Config endpoint
+    app.get('/api/config/midtrans', (req, res) => {
+      res.json({
+        clientKey: process.env.MIDTRANS_CLIENT_KEY,
+        isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true'
+      });
+    });
+
+    // Report endpoint
+    app.post('/api/send-report', authenticate, async (req, res) => {
+      try {
+        const result = await sendTestEmail(req.user.id);
+        res.json(result);
+      } catch (error) {
+        console.error('Send report error:', error);
+        res.status(500).json({ error: error.message });
+      }
+    });
+
+    // Cron Job for Monitoring
+    cron.schedule('* * * * *', async () => {
+      console.log('Running monitoring cycle...');
+      try {
+        await runMonitoringCycle();
+      } catch (error) {
+        console.error('Monitoring cycle error:', error);
+      }
+    });
+
+    // Frontend fallback
     app.get('*', (req, res) => {
       res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
