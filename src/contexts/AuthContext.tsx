@@ -5,9 +5,11 @@ interface User {
   id: number;
   name: string;
   email: string;
+  role?: string;
   plan: string;
   planExpiresAt?: string;
   emailVerified: boolean;
+  avatar?: string;
   whatsapp?: string;
   whatsappVerified?: boolean;
 }
@@ -19,6 +21,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

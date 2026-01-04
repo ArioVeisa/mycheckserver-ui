@@ -12,7 +12,7 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -33,7 +33,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <span className="text-xl font-bold">MyCheckServer</span>
           </Link>
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-2">
           <NavLink
             to="/dashboard"
@@ -43,7 +43,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <LayoutDashboard className="h-5 w-5" />
             <span>Dashboard</span>
           </NavLink>
-          
+
           <NavLink
             to="/servers"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -52,7 +52,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <Server className="h-5 w-5" />
             <span>Server List</span>
           </NavLink>
-          
+
           <NavLink
             to="/notifications"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -61,7 +61,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <Bell className="h-5 w-5" />
             <span>Notifications</span>
           </NavLink>
-          
+
           <NavLink
             to="/billing"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -70,7 +70,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <CreditCard className="h-5 w-5" />
             <span>Billing</span>
           </NavLink>
-          
+
           <NavLink
             to="/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -79,11 +79,27 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <Settings className="h-5 w-5" />
             <span>Settings</span>
           </NavLink>
+
+          {logout && ( // Just using this as a stable reference, checking user below
+            null
+          )}
+
+          {/* Admin Link */}
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+            >
+              <Activity className="h-5 w-5" />
+              <span>Admin Panel</span>
+            </NavLink>
+          )}
         </nav>
-        
+
         <div className="p-4 border-t">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={handleLogout}
           >

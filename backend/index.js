@@ -8,14 +8,16 @@ import serverRoutes from './routes/servers.js';
 import billingRoutes from './routes/billing.js';
 import notificationRoutes from './routes/notifications.js';
 import dashboardRoutes from './routes/dashboard.js';
+import adminRoutes from './routes/admin.js';
 import { runMonitoringCycle, sendTestEmail, sendDailyStatusReport } from './services/monitorService.js';
 import { authenticate } from './middleware/auth.js';
+import { trackApiVisit } from './middleware/trackVisitor.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:8081',
@@ -23,7 +25,7 @@ app.use(cors({
       'http://localhost:3000',
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -35,11 +37,15 @@ app.use(cors({
 
 app.use(express.json());
 
+// Track API visits for analytics
+app.use('/api', trackApiVisit);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/servers', serverRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

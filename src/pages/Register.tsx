@@ -1,12 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const GOOGLE_CLIENT_ID = '847911456072-c9en2n9lop6ukf5ht2lnla86qh9pmons.apps.googleusercontent.com';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void;
+          renderButton: (element: HTMLElement, config: any) => void;
+        };
+      };
+    };
+  }
+}
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -16,11 +33,79 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { register } = useAuth();
+  const { register, setUser } = useAuth();
+
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeGoogleSignIn;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const initializeGoogleSignIn = () => {
+    if (window.google) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+      });
+
+      const buttonDiv = document.getElementById('google-signup-button');
+      if (buttonDiv) {
+        window.google.accounts.id.renderButton(buttonDiv, {
+          theme: 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'signup_with',
+        });
+      }
+    }
+  };
+
+  const handleGoogleCallback = async (response: any) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Google signup failed');
+      }
+
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+
+      toast({
+        title: "Berhasil!",
+        description: `Selamat datang, ${data.user.name}!`,
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Registrasi gagal",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         title: "Error",
@@ -31,7 +116,7 @@ const Register = () => {
     }
 
     setLoading(true);
-    
+
     try {
       await register(name, email, password);
       toast({
@@ -63,6 +148,16 @@ const Register = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Google Sign Up Button */}
+          <div id="google-signup-button" className="w-full flex justify-center mb-4"></div>
+
+          <div className="relative my-4">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+              atau
+            </span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nama</Label>

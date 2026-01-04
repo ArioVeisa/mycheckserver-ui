@@ -29,13 +29,39 @@ const init = (async () => {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
       plan TEXT DEFAULT 'free',
       plan_expires_at TEXT,
       email_verified INTEGER DEFAULT 0,
       whatsapp TEXT,
       whatsapp_verified INTEGER DEFAULT 0,
+      google_id TEXT,
+      avatar TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Add columns if they don't exist (for existing databases)
+  try {
+    db.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`);
+  } catch (e) { /* column exists */ }
+  try {
+    db.run(`ALTER TABLE users ADD COLUMN google_id TEXT`);
+  } catch (e) { /* column exists */ }
+  try {
+    db.run(`ALTER TABLE users ADD COLUMN avatar TEXT`);
+  } catch (e) { /* column exists */ }
+
+  // Page visits table for visitor analytics
+  db.run(`
+    CREATE TABLE IF NOT EXISTS page_visits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      path TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      user_id INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 

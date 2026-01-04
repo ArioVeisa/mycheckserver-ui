@@ -116,10 +116,10 @@ const Dashboard = () => {
                   <XAxis dataKey="time" className="text-muted-foreground" />
                   <YAxis className="text-muted-foreground" />
                   <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="uptime" 
-                    stroke="hsl(var(--primary))" 
+                  <Line
+                    type="monotone"
+                    dataKey="uptime"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     dot={{ fill: "hsl(var(--primary))" }}
                   />
@@ -147,6 +147,13 @@ const Dashboard = () => {
             <Link to="/billing">
               <Button variant="outline">View Billing</Button>
             </Link>
+            {user?.role === 'admin' && (
+              <Link to="/admin">
+                <Button variant="default" className="bg-purple-600 hover:bg-purple-700">
+                  Admin Panel
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>

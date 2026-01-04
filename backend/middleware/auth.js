@@ -16,7 +16,7 @@ export const authenticate = async (req, res, next) => {
 
     const result = await pool.request()
       .input('userId', decoded.userId)
-      .query('SELECT id, name, email, plan, plan_expires_at, email_verified, whatsapp, whatsapp_verified FROM users WHERE id = @userId');
+      .query('SELECT id, name, email, role, plan, plan_expires_at, email_verified, whatsapp, whatsapp_verified, google_id, avatar FROM users WHERE id = @userId');
 
     const user = result.recordset[0];
 
@@ -46,6 +46,15 @@ export const authenticate = async (req, res, next) => {
 export const requirePro = (req, res, next) => {
   if (req.user.plan !== 'pro') {
     return res.status(403).json({ error: 'Fitur ini hanya untuk pengguna Pro' });
+  }
+  next();
+};
+
+export const requireAdmin = (req, res, next) => {
+  console.log('DEBUG: requireAdmin check. User role:', req.user?.role);
+  if (req.user.role !== 'admin') {
+    console.log('DEBUG: Access denied. Not admin.');
+    return res.status(403).json({ error: 'Akses ditolak. Hanya admin yang diizinkan.' });
   }
   next();
 };
