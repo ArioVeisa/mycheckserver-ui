@@ -142,6 +142,7 @@ EOF
     "jsonwebtoken": "^9.0.2",
     "midtrans-client": "^1.3.1",
     "mssql": "^12.2.0",
+    "sql.js": "^1.13.0",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "uuid": "^10.0.0"
@@ -159,55 +160,8 @@ EOF
             }
         }
         
-        stage('Setup Database') {
-            steps {
-                sh '''
-                    # Source env vars to get MSSQL password
-                    set -a
-                    . /var/lib/jenkins/mycheckserver.env
-                    set +a
+        // Stage 'Setup Database' removed for SQLite migration
 
-                    # 1. Start SQL Server if not running
-                    if ! docker ps | grep -q mycheckserver-db; then
-                        echo "Starting SQL Server container..."
-                        docker run -d --name mycheckserver-db \
-                            --restart unless-stopped \
-                            --network host \
-                            --env-file /var/lib/jenkins/mycheckserver.env \
-                            mcr.microsoft.com/mssql/server:2022-latest
-                        
-                        echo "Waiting for SQL Server to start (30s)..."
-                        sleep 30
-                    fi
-
-                    # 2. Initialize Database Schema
-                    echo "Initializing database schema..."
-                    # Check for sqlcmd location (try both paths)
-                    docker exec -i mycheckserver-db bash -c 'if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -i /dev/stdin; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin; fi' < backend/scripts/init-mssql.sql
-                    
-                    # 3. Seed Admin User
-                    echo "Seeding admin user..."
-                    if [ ! -d "node_modules/bcryptjs" ]; then npm install bcryptjs; fi
-                    
-                    ADMIN_HASH=$(node -e "console.log(require('bcryptjs').hashSync('admin123', 10))")
-                    
-                    cat > seed_admin.sql <<EOF
-USE mycheckserver;
-GO
-IF NOT EXISTS (SELECT * FROM users WHERE email = 'admin@mycheckserver.com')
-BEGIN
-    INSERT INTO users (name, email, password, role, email_verified) 
-    VALUES ('Administrator', 'admin@mycheckserver.com', '$ADMIN_HASH', 'admin', 1);
-    
-    DECLARE @UserId INT = SCOPE_IDENTITY();
-    INSERT INTO notification_settings (user_id) VALUES (@UserId);
-END
-GO
-EOF
-                    docker exec -i mycheckserver-db bash -c 'if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -i /dev/stdin; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin; fi' < seed_admin.sql
-                '''
-            }
-        }
         
         stage('Deploy Container') {
             steps {

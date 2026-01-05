@@ -2,6 +2,7 @@ import initSqlJs from 'sql.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +15,7 @@ let SQL = null;
 // Initialize SQL.js and database
 const init = (async () => {
   SQL = await initSqlJs();
-  
+
   if (fs.existsSync(dbPath)) {
     const fileBuffer = fs.readFileSync(dbPath);
     db = new SQL.Database(fileBuffer);
@@ -143,6 +144,27 @@ const init = (async () => {
   `);
 
   save();
+  save();
+
+
+  // Seed Admin User
+  const adminCheck = db.prepare("SELECT count(*) as count FROM users WHERE email = 'admin@mycheckserver.com'");
+  adminCheck.step();
+  const adminExists = adminCheck.getAsObject().count;
+  adminCheck.free();
+
+  if (!adminExists) {
+    const hash = bcrypt.hashSync('admin123', 10);
+    db.run(`INSERT INTO users (name, email, password, role, email_verified) VALUES ('Administrator', 'admin@mycheckserver.com', '${hash}', 'admin', 1)`);
+    const idStmt = db.prepare("SELECT last_insert_rowid() as id");
+    idStmt.step();
+    const userId = idStmt.getAsObject().id;
+    idStmt.free();
+    db.run(`INSERT INTO notification_settings (user_id) VALUES (${userId})`);
+    console.log('Admin user seeded');
+  }
+
+  save();
   console.log('Database initialized');
 })();
 
@@ -158,8 +180,9 @@ function save() {
 const wrapper = {
   prepare(sql) {
     return {
-      run(...params) {
+      run(...args) {
         if (!db) throw new Error('Database not initialized');
+        const params = (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) ? args[0] : args;
         db.run(sql, params);
         save();
         // Get last insert rowid using prepared statement
@@ -171,8 +194,9 @@ const wrapper = {
         console.log('INSERT lastInsertRowid:', lastId, 'result:', result);
         return { changes: db.getRowsModified(), lastInsertRowid: lastId };
       },
-      get(...params) {
+      get(...args) {
         if (!db) throw new Error('Database not initialized');
+        const params = (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) ? args[0] : args;
         const stmt = db.prepare(sql);
         stmt.bind(params);
         if (stmt.step()) {
@@ -183,8 +207,9 @@ const wrapper = {
         stmt.free();
         return undefined;
       },
-      all(...params) {
+      all(...args) {
         if (!db) throw new Error('Database not initialized');
+        const params = (args.length === 1 && typeof args[0] === 'object' && !Array.isArray(args[0])) ? args[0] : args;
         const results = [];
         const stmt = db.prepare(sql);
         stmt.bind(params);
