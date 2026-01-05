@@ -203,13 +203,10 @@ EOF
         
         stage('Deploy to Azure') {
             steps {
-                withCredentials([string(credentialsId: 'azure-publish-profile', variable: 'PUBLISH_PROFILE')]) {
+                withCredentials([usernamePassword(credentialsId: 'azure-publish-profile', usernameVariable: 'AZURE_USER', passwordVariable: 'AZURE_PASS')]) {
                     sh '''
-                        USER=$(echo "$PUBLISH_PROFILE" | grep -oP 'userName="\\K[^"]+' | head -1)
-                        PASS=$(echo "$PUBLISH_PROFILE" | grep -oP 'userPWD="\\K[^"]+' | head -1)
-                        
                         curl -X POST \
-                            -u "$USER:$PASS" \
+                            -u "$AZURE_USER:$AZURE_PASS" \
                             --data-binary @deploy.zip \
                             "https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/api/zipdeploy"
                     '''
