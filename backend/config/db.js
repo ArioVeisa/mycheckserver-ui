@@ -19,15 +19,26 @@ const createRequest = () => {
     async query(q) {
       await init;
 
-      // Fix T-SQL specifics to SQLite
+      // Fix T-SQL and MySQL specifics to SQLite
       let fixedQuery = q
-        .replace(/GETDATE\(\)/gi, "CURRENT_TIMESTAMP")
-        .replace(/SCOPE_IDENTITY\(\)/gi, "last_insert_rowid()");
+        .replace(/GETDATE\(\)/gi, "datetime('now', 'localtime')")
+        .replace(/CURRENT_TIMESTAMP/gi, "datetime('now', 'localtime')")
+        .replace(/scope_identity\(\)/gi, "last_insert_rowid()")
+        .replace(/CURDATE\(\)/gi, "date('now', 'localtime')")
+        .replace(/NOW\(\)/gi, "datetime('now', 'localtime')")
+        // Handle DATE_SUB(NOW(), INTERVAL @days DAY) -> datetime('now', '-' || @days || ' days')
+        .replace(/DATE_SUB\s*\(\s*NOW\(\)\s*,\s*INTERVAL\s+@(\w+)\s+DAY\s*\)/gi, "datetime('now', '-' || @$1 || ' days')");
 
-      // Handle common T-SQL top usage: SELECT TOP 1 * FROM ... -> SELECT * FROM ... LIMIT 1
-      if (/SELECT\s+TOP\s+1\s+/i.test(fixedQuery)) {
-        fixedQuery = fixedQuery.replace(/SELECT\s+TOP\s+1\s+/i, "SELECT ");
-        fixedQuery += " LIMIT 1";
+      // Handle common T-SQL top usage
+      if (/SELECT\s+TOP\s+\d+\s+/i.test(fixedQuery)) {
+        const match = fixedQuery.match(/SELECT\s+TOP\s+(\d+)\s+/i);
+        if (match) {
+          fixedQuery = fixedQuery.replace(/SELECT\s+TOP\s+\d+\s+/i, "SELECT ");
+          // Append LIMIT at the end if not present (simple heuristic)
+          if (!fixedQuery.toLowerCase().includes('limit ')) {
+            fixedQuery += ` LIMIT ${match[1]}`;
+          }
+        }
       }
 
       console.log('SQL Proxy Query:', fixedQuery, 'Params:', params);
