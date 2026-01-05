@@ -182,7 +182,8 @@ EOF
 
                     # 2. Initialize Database Schema
                     echo "Initializing database schema..."
-                    docker exec -i mycheckserver-db /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin < backend/scripts/init-mssql.sql
+                    # Check for sqlcmd location (try both paths)
+                    docker exec -i mycheckserver-db bash -c 'if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -i /dev/stdin; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin; fi' < backend/scripts/init-mssql.sql
                     
                     # 3. Seed Admin User
                     echo "Seeding admin user..."
@@ -203,7 +204,7 @@ BEGIN
 END
 GO
 EOF
-                    docker exec -i mycheckserver-db /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin < seed_admin.sql
+                    docker exec -i mycheckserver-db bash -c 'if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -i /dev/stdin; else /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -i /dev/stdin; fi' < seed_admin.sql
                 '''
             }
         }
