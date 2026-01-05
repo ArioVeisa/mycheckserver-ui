@@ -11,7 +11,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import adminRoutes from './routes/admin.js';
 import { runMonitoringCycle, sendTestEmail, sendDailyStatusReport } from './services/monitorService.js';
 import { authenticate } from './middleware/auth.js';
-import { trackApiVisit } from './middleware/trackVisitor.js';
+import { trackApiVisit, trackVisitor } from './middleware/trackVisitor.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,6 +39,7 @@ app.use(express.json());
 
 // Track API visits for analytics
 app.use('/api', trackApiVisit);
+app.use(trackVisitor);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/servers', serverRoutes);
