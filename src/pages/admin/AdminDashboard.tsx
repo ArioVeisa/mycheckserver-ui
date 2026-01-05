@@ -6,7 +6,7 @@ import { Users, CreditCard, Server, Eye, TrendingUp, ArrowLeft } from "lucide-re
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\/?$/, '');
 
 interface Stats {
     totalUsers: number;
