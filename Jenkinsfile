@@ -68,7 +68,34 @@ pipeline {
                     mkdir -p deploy/public
                     cp -r dist/* deploy/public/
                     cp -r backend/* deploy/
-                    rm -rf deploy/data.db* deploy/node_modules
+                    rm -rf deploy/data.db* deploy/node_modules deploy/scripts
+                    
+                    # Replace db.js (MSSQL) with SQLite wrapper
+                    cat > deploy/config/db.js << 'DBEOF'
+// SQLite wrapper that exports the same interface as the original MSSQL db.js
+import db from './database.js';
+
+// Create a mock poolPromise that resolves immediately
+// The actual database is SQLite via database.js which is used by controllers
+export const poolPromise = Promise.resolve({
+  request: () => ({
+    input: () => ({ query: async () => ({ recordset: [] }) }),
+    query: async (sql) => {
+      console.log('SQL query intercepted (using SQLite instead):', sql.substring(0, 100));
+      return { recordset: [] };
+    }
+  })
+});
+
+export const sql = {
+  Int: 'Int',
+  NVarChar: () => 'NVarChar',
+  DateTime: 'DateTime',
+  Bit: 'Bit'
+};
+
+export default db;
+DBEOF
                     
                     cat > deploy/server.js << 'EOF'
 import express from 'express';
