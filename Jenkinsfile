@@ -2,8 +2,9 @@ pipeline {
     agent any
     
     environment {
-        AZURE_WEBAPP_NAME = 'mycheckserver-app-ario'
         NVM_DIR = '/var/lib/jenkins/.nvm'
+        DOCKER_IMAGE = 'mycheckserver'
+        CONTAINER_NAME = 'mycheckserver-app'
     }
     
     stages {
@@ -63,7 +64,7 @@ pipeline {
         stage('Prepare Deployment') {
             steps {
                 sh '''
-                    rm -rf deploy deploy.zip
+                    rm -rf deploy
                     mkdir -p deploy/public
                     cp -r dist/* deploy/public/
                     cp -r backend/* deploy/
@@ -195,22 +196,38 @@ EOF
   "engines": { "node": ">=18.0.0" }
 }
 EOF
-
-                    cd deploy && zip -r ../deploy.zip .
                 '''
             }
         }
         
-        stage('Deploy to Azure') {
+        stage('Build Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'azure-publish-profile', usernameVariable: 'AZURE_USER', passwordVariable: 'AZURE_PASS')]) {
-                    sh '''
-                        curl -X POST \
-                            -u "$AZURE_USER:$AZURE_PASS" \
-                            --data-binary @deploy.zip \
-                            "https://${AZURE_WEBAPP_NAME}.scm.azurewebsites.net/api/zipdeploy"
-                    '''
-                }
+                sh '''
+                    docker build -t ${DOCKER_IMAGE}:latest .
+                '''
+            }
+        }
+        
+        stage('Deploy Container') {
+            steps {
+                sh '''
+                    # Stop and remove old container if exists
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    
+                    # Run new container
+                    docker run -d \
+                        --name ${CONTAINER_NAME} \
+                        --restart unless-stopped \
+                        -p 80:8080 \
+                        -e PORT=8080 \
+                        -e JWT_SECRET=your-jwt-secret-here \
+                        -e NODE_ENV=production \
+                        ${DOCKER_IMAGE}:latest
+                    
+                    # Show running containers
+                    docker ps
+                '''
             }
         }
     }
@@ -220,7 +237,7 @@ EOF
             cleanWs()
         }
         success {
-            echo "Deployed to https://${AZURE_WEBAPP_NAME}.azurewebsites.net"
+            echo "Deployed to http://52.230.95.159"
         }
     }
 }
