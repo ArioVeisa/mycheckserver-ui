@@ -164,6 +164,34 @@ const init = (async () => {
     console.log('Admin user seeded');
   }
 
+  // Seed Dummy Visits
+  const visitCheck = db.prepare("SELECT count(*) as count FROM page_visits");
+  visitCheck.step();
+  const visitCount = visitCheck.getAsObject().count;
+  visitCheck.free();
+
+  if (visitCount === 0) {
+    console.log('Seeding dummy page visits...');
+    // Prepare statement outside the loop for performance? No, wrapper doesn't support transaction/prep reuse easily inside run
+    // We will just run raw inserts for simplicity given the wrapper limitations or specific implementation
+
+    const now = new Date();
+    for (let i = 0; i < 7; i++) {
+      // Random count 5-20
+      const count = Math.floor(Math.random() * 15) + 5;
+      for (let j = 0; j < count; j++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        // Random time
+        d.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0);
+
+        const dateStr = d.toISOString().replace('T', ' ').substring(0, 19);
+        db.run(`INSERT INTO page_visits (path, ip_address, user_agent, created_at) VALUES ('/', '127.0.0.1', 'Mozilla/5.0 (Dummy)', '${dateStr}')`);
+      }
+    }
+    console.log('Dummy visits seeded');
+  }
+
   save();
   console.log('Database initialized');
 })();
