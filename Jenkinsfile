@@ -75,18 +75,19 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import cron from 'node-cron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -95,81 +96,65 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-async function startServer() {
+// Import and use routes (they use SQLite internally via database.js)
+import authRoutes from './routes/auth.js';
+import serverRoutes from './routes/servers.js';
+import billingRoutes from './routes/billing.js';
+import notificationRoutes from './routes/notifications.js';
+import dashboardRoutes from './routes/dashboard.js';
+import adminRoutes from './routes/admin.js';
+import { trackApiVisit } from './middleware/trackVisitor.js';
+import { runMonitoringCycle, sendTestEmail } from './services/monitorService.js';
+import { authenticate } from './middleware/auth.js';
+
+// Apply middlewares
+app.use('/api', trackApiVisit);
+
+// Apply routes
+app.use('/api/auth', authRoutes);
+app.use('/api/servers', serverRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Config endpoint
+app.get('/api/config/midtrans', (req, res) => {
+  res.json({
+    clientKey: process.env.MIDTRANS_CLIENT_KEY,
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true'
+  });
+});
+
+// Report endpoint
+app.post('/api/send-report', authenticate, async (req, res) => {
   try {
-    // Wait for database to initialize
-    const { poolPromise } = await import('./config/db.js');
-    await poolPromise;
-    console.log('Database connected');
-
-    // Middlewares
-    const { trackApiVisit } = await import('./middleware/trackVisitor.js');
-    const { authenticate } = await import('./middleware/auth.js');
-
-    // Services
-    const { runMonitoringCycle, sendTestEmail } = await import('./services/monitorService.js');
-
-    // Routes
-    const authRoutes = (await import('./routes/auth.js')).default;
-    const serverRoutes = (await import('./routes/servers.js')).default;
-    const notificationRoutes = (await import('./routes/notifications.js')).default;
-    const billingRoutes = (await import('./routes/billing.js')).default;
-    const dashboardRoutes = (await import('./routes/dashboard.js')).default;
-    const adminRoutes = (await import('./routes/admin.js')).default;
-
-    // Apply middlewares
-    app.use('/api', trackApiVisit);
-
-    // Apply routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/servers', serverRoutes);
-    app.use('/api/notifications', notificationRoutes);
-    app.use('/api/billing', billingRoutes);
-    app.use('/api/dashboard', dashboardRoutes);
-    app.use('/api/admin', adminRoutes);
-
-    // Config endpoint
-    app.get('/api/config/midtrans', (req, res) => {
-      res.json({
-        clientKey: process.env.MIDTRANS_CLIENT_KEY,
-        isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true'
-      });
-    });
-
-    // Report endpoint
-    app.post('/api/send-report', authenticate, async (req, res) => {
-      try {
-        const result = await sendTestEmail(req.user.id);
-        res.json(result);
-      } catch (error) {
-        console.error('Send report error:', error);
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Cron Job for Monitoring
-    cron.schedule('* * * * *', async () => {
-      console.log('Running monitoring cycle...');
-      try {
-        await runMonitoringCycle();
-      } catch (error) {
-        console.error('Monitoring cycle error:', error);
-      }
-    });
-
-    // Frontend fallback
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    });
-
-    app.listen(PORT, () => console.log('Server running on port ' + PORT));
+    const result = await sendTestEmail(req.user.id);
+    res.json(result);
   } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    console.error('Send report error:', error);
+    res.status(500).json({ error: error.message });
   }
-}
+});
 
-startServer();
+// Cron Job for Monitoring (every minute)
+cron.schedule('* * * * *', async () => {
+  console.log('Running monitoring cycle...');
+  try {
+    await runMonitoringCycle();
+  } catch (error) {
+    console.error('Monitoring cycle error:', error);
+  }
+});
+
+// Frontend fallback for SPA
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('Server running on port ' + PORT);
+});
 EOF
 
                     cat > deploy/package.json << 'EOF'
